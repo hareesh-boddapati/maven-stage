@@ -1,0 +1,14 @@
+node
+{
+    stage('code')
+    {
+        git branch: 'stage', url: 'https://github.com/hareesh-boddapati/maven-stage.git'
+    }
+    stage("maven")
+    {
+        def mvnHome=tool name: "mvn3.6.3"
+        sh "${mvnHome}/bin/mvn package"
+        
+    }
+    
+}

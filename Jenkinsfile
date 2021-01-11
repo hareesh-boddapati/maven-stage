@@ -1,23 +1,35 @@
 node
 {
-    def mavenhd = tool name: "maven"
-  
-    stage("checkout code")
+    def mvnHome = tool name: "maven3.6.3"
+    stage("check out code")
     {
-        git url: 'https://github.com/hareesh-boddapati/maven-stage.git',branch: 'dev'
+       git 'https://github.com/hareesh-boddapati/maven-stage.git' 
     }
-    stage("build")
+    stage("build the code")
     {
-        sh "${mavenhd}/bin/mvn clean package"
+        sh "${mvnHome}/bin/mvn clean package"
     }
-    stage("deployment")
+    stage("docker build")
     {
-        /*sshagent(['deployapptom']) {
-        sh "scp -o StrictHostKeyChecking=no target/*.war ubuntu@13.127.158.118:/opt/tomcat/tomcat9/webapps/"
-*/
-deploy adapters: [tomcat9(credentialsId: 'b8b9f833-619c-420e-ad49-56b61ccda728', path: '', url: 'http://13.127.158.118:8080/')], contextPath: null, war: '**/*.war'
-
-
-
+        sh "docker build -t hareeshdock/app:1 ."
+    }
+    stage("push docker image")
+    {
+        withCredentials([string(credentialsId: 'docker_hub_passwd', variable: 'docker_hub_pwd')])
+        {
+             sh "docker login -u hareeshdock -p ${docker_hub_pwd}"
+             sh "docker push hareeshdock/app:1"
+        }
+    }
+    stage("deploy docker image into deployment server")
+    {
+        def dockerRun = "docker run -d -p 8080:8080 --name containername  hareeshdock/app:1 "
+        sshagent(['ubuntu-docker']) 
+        {
+            sh "ssh -o StrictHostKeyChecking=no ubuntu@13.233.157.133"
+           
+            sh "ssh ubuntu@13.233.157.133 ${dockerRun}"
+        }
+    }
     
-    }
+}
